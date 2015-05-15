@@ -10,6 +10,8 @@
 
 #import "ViewController.h"
 
+#import "ZBarSDK.h"
+
 @interface AppDelegate ()
 
 @end
@@ -18,14 +20,8 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-
-//    UIWindow *keyWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-//    
-//    ViewController *VC = [[ViewController alloc] init];
-//    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:VC];
-//    
-//    keyWindow.rootViewController = nav;
-//    [keyWindow makeKeyAndVisible];
+    
+    [ZBarReaderView class];
     
     return YES;
 }

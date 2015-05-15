@@ -18,22 +18,43 @@
 
 @property(nonatomic, assign) BOOL isBusy;
 
+
+// 其他变量
+@property (nonatomic,weak) UIActivityIndicatorView *indicator;
+
 @end
 
 @implementation ZXingObjCViewController
 
+/*
+ viewDidLoad
+ 1.画自定义UI
+ 2.显示菊花
+ 
+ viewDidAppear
+ 1.配置摄像头    -> 跳至未授权处理
+ 2.停止菊花
+ 3.开始摄像
+ 
+ 未授权处理：
+ 1.停止菊花
+ 2.弹窗提示用户授权
+ 3.点击弹窗返回上一级
+ */
 
 #pragma mark - life cycle
 - (void)dealloc
 {
     
-    NSLog(@"YCFQrcodeScanViewController dealloc");
+    NSLog(@"ZXingObjCViewController dealloc");
     [self.capture.layer removeFromSuperlayer];
 }
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    self.view.backgroundColor = [UIColor blackColor];
     
     self.capture = [[ZXCapture alloc] init];
     self.capture.camera = self.capture.back;
@@ -72,27 +93,6 @@
     [super viewDidDisappear:animated];
 }
 
-#pragma mark - draw
--(void)drawScannerViewWithFrame:(CGRect)frame
-{
-    // 生成扫描框
-    UIView *view = [[UIView alloc] initWithFrame:frame];
-    view.backgroundColor = [UIColor blueColor];
-    view.alpha = 0.3;
-    self.scannerView = view;
-    [self.view addSubview:view];
-    
-    UIImageView *line = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, view.bounds.size.width, 3)];
-    line.backgroundColor = [UIColor orangeColor];
-    [view addSubview:line];
-    
-    [UIView animateWithDuration:2.0 delay:0 options:UIViewAnimationOptionAutoreverse|UIViewAnimationOptionRepeat animations:^{
-        line.frame = CGRectMake(0, view.bounds.size.height - 2, view.bounds.size.width, 3);
-    } completion:^(BOOL finished) {
-        
-    }];
-}
-
 #pragma mark - delegate
 - (void)captureResult:(ZXCapture *)capture result:(ZXResult *)result
 {
@@ -117,12 +117,12 @@
             // 振动提示
             AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
             
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 self.isBusy = NO;
+                [self.capture start];
             });
             
-            [self.navigationController popViewControllerAnimated:NO];
-//            [YCFGlobalNavigationCtrl popViewControllerAnimated:NO];
+
             
             
             NSLog(@"%@",result.text);
@@ -140,6 +140,49 @@
 }
 
 #pragma mark - Draw
+-(void)drawScannerViewWithFrame:(CGRect)frame
+{
+    // 生成扫描框
+    UIView *view = [[UIView alloc] initWithFrame:frame];
+    view.backgroundColor = [UIColor blueColor];
+    view.alpha = 0.3;
+    self.scannerView = view;
+    [self.view addSubview:view];
+    
+    UIImageView *line = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, view.bounds.size.width, 3)];
+    line.backgroundColor = [UIColor orangeColor];
+    [view addSubview:line];
+    
+    [UIView animateWithDuration:2.0 delay:0 options:UIViewAnimationOptionAutoreverse|UIViewAnimationOptionRepeat animations:^{
+        line.frame = CGRectMake(0, view.bounds.size.height - 2, view.bounds.size.width, 3);
+    } completion:^(BOOL finished) {
+        
+    }];
+}
+
+// 显示菊花
+- (void)showLoading
+{
+    if (!self.indicator)
+    {
+        UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
+        indicator.center = self.view.center;
+        indicator.hidden = NO;
+        self.indicator = indicator;
+        [self.view addSubview:indicator];
+        
+        [self.view bringSubviewToFront:indicator];
+    }
+    [self.indicator startAnimating];
+}
+
+// 隐藏菊花
+-(void)hideLoading
+{
+    if (self.indicator && [self.indicator isAnimating]) {
+        [self.indicator stopAnimating];
+    }
+}
 
 #pragma mark - 网络请求(request)
 
@@ -156,15 +199,18 @@
 #pragma mark - 私有方法(p_xxx)
 
 #pragma mark - getter
-
-/*
-#pragma mark - Navigation
-
-// In a storyboard-based application, you will often want to do a little preparation before navigation
-- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    // Get the new view controller using [segue destinationViewController].
-    // Pass the selected object to the new view controller.
+-(CGRect)cropRect
+{
+    if (_cropRect.size.width == 0 || _cropRect.size.height == 0)
+    {
+        CGFloat cropW = self.view.frame.size.width;
+        CGFloat cropH = self.view.frame.size.width;
+        CGFloat cropX = (self.view.frame.size.width - cropW) * 0.5;
+        CGFloat cropY = 44;
+        _cropRect = CGRectMake(cropX, cropY, cropW, cropH);
+    }
+    
+    return _cropRect;
 }
-*/
 
 @end

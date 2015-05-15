@@ -29,19 +29,26 @@
 @implementation OriginalViewController
 
 /*
- 1.显示加载中
- 2.画自定义UI
- 3.配置摄像头
- 4.隐藏加载文字
- 5.开始捕捉图像
+ viewDidLoad
+ 1.画自定义UI
+ 2.显示菊花
+ 
+ viewDidAppear
+ 1.配置摄像头    -> 跳至未授权处理
+ 2.停止菊花
+ 3.开始摄像
+ 
+ 未授权处理：
+ 1.停止菊花
+ 2.弹窗提示用户授权
+ 3.点击弹窗返回上一级
  */
-
 
 #pragma mark - Life Cycle
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = [UIColor blackColor];
     // 画自定义view
     [self drawCustomView];
     
@@ -58,39 +65,13 @@
         [self hideLoading];
         
         // 开始捕捉图像
-//        [self startCapture];
+        [self startCapture];
     };
-}
-
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-
-    
-}
-
-// 开始捕捉图像
-- (void)startCapture
-{
-    if (_captureSession && ![_captureSession isRunning]) {
-        [_captureSession startRunning];
-        _isReading = YES;
-    }
-}
-
-// 停止捕捉图像
-- (void)stopCapture
-{
-    if ([_captureSession isRunning]) {
-        [_captureSession stopRunning];
-        _isReading = NO;
-    }
 }
 
 // 配置摄像头
 - (BOOL)setupCamera
 {
-    
-    
     // 相机是否授权
     AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
     if (!(status == AVAuthorizationStatusAuthorized)) {
@@ -141,8 +122,6 @@
     [_videoPreviewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
     [_videoPreviewLayer setFrame:self.view.layer.bounds];
     [self.view.layer insertSublayer:_videoPreviewLayer atIndex:0];
-//    [self.view.layer addSublayer:_videoPreviewLayer];
-    
     
     // 设置焦距
     if ([captureDevice lockForConfiguration:nil])
@@ -155,29 +134,12 @@
         [captureDevice unlockForConfiguration];
     }
 
-    [self startCapture];
-    
-//    _isReading = YES;
-//    [_captureSession startRunning];
-    
+//    [self startCapture];
     return YES;
 }
 
-// 根据屏幕坐标系的rect返回设置rectOfInterest的Rect
-- (CGRect)convertRectOfInterest:(CGRect)rect
-{
-    CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
-    CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
-    
-    CGFloat convertX = rect.origin.y / screenH;
-    CGFloat convertY = ((screenW - rect.size.width) / 2) / screenW;
-    CGFloat convertW = rect.size.height / screenH;
-    CGFloat convertH = rect.size.width / screenW;
-    
-    return CGRectMake(convertX, convertY, convertW, convertH);
-}
-
-// 添加UI
+#pragma mark - draw
+// 画自定义UI
 - (void)drawCustomView
 {
     UIView *targetView = [[UIView alloc] initWithFrame:self.cropRect];
@@ -191,9 +153,6 @@
     scannerView.alpha = 0.3;
     [self.view addSubview:scannerView];
 }
-
-
-
 
 // 显示菊花
 - (void)showLoading
@@ -219,13 +178,8 @@
     }
 }
 
-#pragma mark - Draw
 
-#pragma mark - 网络请求(request)
-
-#pragma mark - 数据处理(dealWith)
-
-#pragma mark - 系统Delegate
+#pragma mark - delegate
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection
 {
     if (!_isReading) return;
@@ -246,17 +200,43 @@
     }
 }
 
-#pragma mark - 自定义Delegate
+#pragma mark - private method
+// 开始捕捉图像
+- (void)startCapture
+{
+    if (_captureSession && ![_captureSession isRunning]) {
+        [_captureSession startRunning];
+        _isReading = YES;
+    }
+}
 
-#pragma mark - 通知（handle）
+// 停止捕捉图像
+- (void)stopCapture
+{
+    if ([_captureSession isRunning]) {
+        [_captureSession stopRunning];
+        _isReading = NO;
+    }
+}
 
-#pragma mark - IBAction(Action结尾)
-
-#pragma mark - 私有方法(p_xxx)
+// 根据屏幕坐标系的rect返回设置rectOfInterest的Rect
+- (CGRect)convertRectOfInterest:(CGRect)rect
+{
+    CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
+    CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+    
+    CGFloat convertX = rect.origin.y / screenH;
+    CGFloat convertY = ((screenW - rect.size.width) / 2) / screenW;
+    CGFloat convertW = rect.size.height / screenH;
+    CGFloat convertH = rect.size.width / screenW;
+    
+    return CGRectMake(convertX, convertY, convertW, convertH);
+}
 
 #pragma mark - getter
 -(CGRect)cropRect
 {
+    // 如果外部没有传进相应的参数，预设扫描区域
     if (_cropRect.size.width == 0 || _cropRect.size.height == 0)
     {
         CGFloat cropW = self.view.frame.size.width;

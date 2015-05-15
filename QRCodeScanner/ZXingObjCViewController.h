@@ -10,4 +10,6 @@
 
 @interface ZXingObjCViewController : UIViewController
 
+@property (nonatomic,assign) CGRect cropRect;   // 扫描区域
+
 @end

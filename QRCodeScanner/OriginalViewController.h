@@ -10,7 +10,10 @@
 
 @interface OriginalViewController : UIViewController
 
-@property (nonatomic,assign) BOOL qrcodeFlag;   // 只需要二维码时，传YES
+
 @property (nonatomic,assign) CGRect cropRect;   // 扫描区域
+
+
+@property (nonatomic,assign) BOOL qrcodeFlag;   // 只需要二维码时，传YES
 
 @end
