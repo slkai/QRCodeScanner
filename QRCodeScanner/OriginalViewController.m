@@ -49,8 +49,7 @@
     [super viewDidLoad];
     
     self.view.backgroundColor = [UIColor blackColor];
-    // 画自定义view
-    [self drawCustomView];
+    
     // 转菊花
     [self showLoading];
 }
@@ -58,6 +57,9 @@
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
+    // 画自定义view
+    [self drawCustomView];
+    
     // 配置摄像头
     if ([self setupCamera])
     {
@@ -86,16 +88,58 @@
 // 画自定义UI
 - (void)drawCustomView
 {
-    UIView *targetView = [[UIView alloc] initWithFrame:self.cropRect];
-    targetView.backgroundColor = [UIColor redColor];
-    targetView.alpha = 0.1;
-    [self.view addSubview:targetView];
+    CGFloat screenW = self.view.frame.size.width;
+    CGFloat screenH = self.view.frame.size.height;
     
-    UIView *scannerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 220, 220)];
-    scannerView.center = CGPointMake(targetView.frame.size.width * 0.5, targetView.frame.origin.y + targetView.frame.size.height * 0.5);
-    scannerView.backgroundColor = [UIColor blueColor];
-    scannerView.alpha = 0.3;
-    [self.view addSubview:scannerView];
+    UIView *container = [[UIView alloc] initWithFrame:self.view.bounds];
+    container.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:container];
+    
+    // 显示的扫描区域比实际的扫描区域窄
+    CGFloat middleViewW = self.cropRect.size.width - 60;
+    CGFloat middleViewH = self.cropRect.size.height - 60;
+    CGFloat middleViewX = self.cropRect.origin.x + 30;
+    CGFloat middleViewY = self.cropRect.origin.y + 30;
+    
+    // middle View
+    UIImageView *middleView = [[UIImageView alloc] initWithFrame:CGRectMake(middleViewX, middleViewY, middleViewW, middleViewH)];
+    middleView.image = [UIImage imageNamed:@"QRCodeScanRect"];
+    [container addSubview:middleView];
+    
+    UIImageView *scanLine = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, middleViewW, 3)];
+    scanLine.image = [UIImage imageNamed:@"QRCodeScanLine"];
+    [middleView addSubview:scanLine];
+    
+    [UIView animateWithDuration:3.0 delay:0 options:UIViewAnimationOptionRepeat|UIViewAnimationOptionAllowAnimatedContent animations:^{
+        scanLine.frame = CGRectMake(0, middleViewH, middleViewW, 6);
+    } completion:^(BOOL finished) {
+        
+    }];
+    
+    // top
+    UIView *topView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenW, middleViewY)];
+    topView.backgroundColor = [UIColor blackColor];
+    topView.alpha = 0.3;
+    [container addSubview:topView];
+    
+    // left
+    UIView *leftView = [[UIView alloc] initWithFrame:CGRectMake(0, middleViewY, middleViewX, screenH - middleViewY)];
+    leftView.backgroundColor = [UIColor blackColor];
+    leftView.alpha = 0.3;
+    [container addSubview:leftView];
+    
+    // right
+    UIView *rightView = [[UIView alloc] initWithFrame:CGRectMake(middleViewX + middleViewW, middleViewY, screenW - (middleViewX + middleViewW), screenH - middleViewY)];
+    rightView.backgroundColor = [UIColor blackColor];
+    rightView.alpha = 0.3;
+    [container addSubview:rightView];
+    
+    // bottom
+    UIView *bottomView = [[UIView alloc] initWithFrame:CGRectMake(middleViewX, middleViewY + middleViewH, middleViewW, screenH - (middleViewY + middleViewH))];
+    bottomView.backgroundColor = [UIColor blackColor];
+    bottomView.alpha = 0.3;
+    [container addSubview:bottomView];
+    
 }
 
 // 显示菊花
@@ -274,7 +318,7 @@
         CGFloat cropW = self.view.frame.size.width;
         CGFloat cropH = self.view.frame.size.width;
         CGFloat cropX = (self.view.frame.size.width - cropW) * 0.5;
-        CGFloat cropY = 44;
+        CGFloat cropY = 64;
         _cropRect = CGRectMake(cropX, cropY, cropW, cropH);
     }
     
