@@ -51,7 +51,6 @@
     self.view.backgroundColor = [UIColor blackColor];
     // 画自定义view
     [self drawCustomView];
-    
     // 转菊花
     [self showLoading];
 }
@@ -60,10 +59,10 @@
 {
     [super viewDidAppear:animated];
     // 配置摄像头
-    if ([self setupCamera]) {
+    if ([self setupCamera])
+    {
         // 停止菊花
         [self hideLoading];
-        
         // 开始捕捉图像
         [self startCapture];
     }
@@ -76,73 +75,11 @@
     }
 }
 
-// 配置摄像头
-- (BOOL)setupCamera
+-(void)viewDidDisappear:(BOOL)animated
 {
-    // 相机是否授权
-    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
-    if (!(status == AVAuthorizationStatusAuthorized)) {
-        NSLog(@"CaptureDevice not authorized");
-        return NO;
-    }
+    [self stopCapture];
     
-    // 添加捕捉设备
-    AVCaptureDevice *captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    
-    // 添加输入流
-    NSError *error;
-    AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
-    
-    if (!input) {
-        NSLog(@"%@", [error localizedDescription]);
-        return NO;
-    }
-    
-    // 添加session
-    _captureSession = [[AVCaptureSession alloc] init];
-    _captureSession.sessionPreset = AVCaptureSessionPresetHigh; // 最高质量
-    
-    // 添加input
-    [_captureSession addInput:input];
-    
-    // 添加output
-    AVCaptureMetadataOutput *captureMetadataOutput = [[AVCaptureMetadataOutput alloc] init];
-    captureMetadataOutput.rectOfInterest = [self convertRectOfInterest:self.cropRect];
-    
-    [_captureSession addOutput:captureMetadataOutput];
-    
-    // 异步处理代理方法，不妨碍主线程
-    dispatch_queue_t dispatchQueue;
-    dispatchQueue = dispatch_queue_create("myQueue", NULL);
-    [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatchQueue];
-    
-    // 仅仅用来扫二维码时，可以设置qrcodeFlag = YES;
-    if (self.qrcodeFlag)
-        [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
-    else
-    {
-        [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObjects:AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeCode128Code, AVMetadataObjectTypeQRCode, nil]];
-    }
-    
-    // 添加previewlayer,关联session
-    _videoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:_captureSession];
-    [_videoPreviewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
-    [_videoPreviewLayer setFrame:self.view.layer.bounds];
-    [self.view.layer insertSublayer:_videoPreviewLayer atIndex:0];
-    
-    // 设置焦距
-    if ([captureDevice lockForConfiguration:nil])
-    {
-        NSLog(@"VideoMaxZoomFactor: %f",captureDevice.activeFormat.videoMaxZoomFactor);
-        if (captureDevice.activeFormat.videoMaxZoomFactor >= 2.0)
-        {
-            captureDevice.videoZoomFactor = 2.0;
-        }
-        [captureDevice unlockForConfiguration];
-    }
-
-//    [self startCapture];
-    return YES;
+    [super viewDidDisappear:animated];
 }
 
 #pragma mark - draw
@@ -225,6 +162,77 @@
 }
 
 #pragma mark - private method
+// 配置摄像头
+- (BOOL)setupCamera
+{
+    // 相机是否授权
+    if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
+    {
+        if (!([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo] == AVAuthorizationStatusAuthorized))
+        {
+            NSLog(@"CaptureDevice not authorized");
+            return NO;
+        }
+    }
+    
+    // 添加捕捉设备
+    AVCaptureDevice *captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    
+    // 添加输入流
+    NSError *error;
+    AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
+    
+    if (!input) {
+        NSLog(@"%@", [error localizedDescription]);
+        return NO;
+    }
+    
+    // 添加session
+    _captureSession = [[AVCaptureSession alloc] init];
+    _captureSession.sessionPreset = AVCaptureSessionPresetHigh; // 最高质量
+    
+    // 添加input
+    [_captureSession addInput:input];
+    
+    // 添加output
+    AVCaptureMetadataOutput *captureMetadataOutput = [[AVCaptureMetadataOutput alloc] init];
+    captureMetadataOutput.rectOfInterest = [self convertRectOfInterest:self.cropRect];
+    
+    [_captureSession addOutput:captureMetadataOutput];
+    
+    // 异步处理代理方法，不妨碍主线程
+    dispatch_queue_t dispatchQueue;
+    dispatchQueue = dispatch_queue_create("myQueue", NULL);
+    [captureMetadataOutput setMetadataObjectsDelegate:self queue:dispatchQueue];
+    
+    // 仅仅用来扫二维码时，可以设置qrcodeFlag = YES;
+    if (self.qrcodeFlag)
+        [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObject:AVMetadataObjectTypeQRCode]];
+    else
+    {
+        [captureMetadataOutput setMetadataObjectTypes:[NSArray arrayWithObjects:AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeCode128Code, AVMetadataObjectTypeQRCode, nil]];
+    }
+    
+    // 添加previewlayer,关联session
+    _videoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:_captureSession];
+    [_videoPreviewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
+    [_videoPreviewLayer setFrame:self.view.layer.bounds];
+    [self.view.layer insertSublayer:_videoPreviewLayer atIndex:0];
+    
+    // 设置焦距
+    if ([captureDevice lockForConfiguration:nil])
+    {
+        NSLog(@"VideoMaxZoomFactor: %f",captureDevice.activeFormat.videoMaxZoomFactor);
+        if (captureDevice.activeFormat.videoMaxZoomFactor >= 2.0)
+        {
+            captureDevice.videoZoomFactor = 2.0;
+        }
+        [captureDevice unlockForConfiguration];
+    }
+    
+    return YES;
+}
+
 // 开始捕捉图像
 - (void)startCapture
 {

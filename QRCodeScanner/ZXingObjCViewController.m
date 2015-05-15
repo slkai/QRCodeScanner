@@ -56,39 +56,36 @@
     
     self.view.backgroundColor = [UIColor blackColor];
     
-    self.capture = [[ZXCapture alloc] init];
-    self.capture.camera = self.capture.back;
-    self.capture.focusMode = AVCaptureFocusModeContinuousAutoFocus;
-    self.capture.rotation = 90.0f;
+    // 画自定义UI
+    [self drawCustomView];
     
-    self.capture.layer.frame = self.view.bounds;
-    [self.view.layer addSublayer:self.capture.layer];
-    
-    [self.view bringSubviewToFront:self.scannerView];
+    // 秀菊花
+    [self showLoading];
 }
 
-- (void)viewWillAppear:(BOOL)animated
+-(void)viewDidAppear:(BOOL)animated
 {
-    [super viewWillAppear:animated];
-
-    self.capture.delegate = self;
-    self.capture.layer.frame = self.view.bounds;
+    [super viewDidAppear:animated];
     
-    //    CGAffineTransform captureSizeTransform = CGAffineTransformMakeScale(320 / self.view.frame.size.width, 480 / self.view.frame.size.height);
-    //    self.capture.scanRect = CGRectApplyAffineTransform(self.scannerView.frame, captureSizeTransform);
-    
-    CGFloat scanRectW = 200;
-    CGFloat scanRectH = 200;
-    CGFloat scanRectX = (self.view.frame.size.width - scanRectW) * 0.5;
-    CGFloat scanRectY = 80;
-    self.capture.scanRect = CGRectMake(scanRectX, scanRectY, scanRectW, scanRectH);
-    [self drawScannerViewWithFrame:self.capture.scanRect];
+    // 配置摄像头
+    if ([self setupCamera])
+    {
+        [self hideLoading];
+    }
+    else
+    {
+        [self hideLoading];
+        // 提示
+        [self showAlertWithTitle:nil andMessage:@"请在iPhone的“设置-私隐-相机”选项中，允许要出发周边游访问你的相机"];
+    }
 }
 
 - (void)viewDidDisappear:(BOOL)animated
 {
     [self.scannerView removeFromSuperview];
     self.scannerView = nil;
+    
+    [self stopCapture];
     
     [super viewDidDisappear:animated];
 }
@@ -139,7 +136,32 @@
     }
 }
 
+// AlertView代理
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0) {
+        NSLog(@"确定");
+        // 返回上一级
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
 #pragma mark - Draw
+// 画自定义UI
+- (void)drawCustomView
+{
+    UIView *targetView = [[UIView alloc] initWithFrame:self.cropRect];
+    targetView.backgroundColor = [UIColor redColor];
+    targetView.alpha = 0.1;
+    [self.view addSubview:targetView];
+    
+    UIView *scannerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 220, 220)];
+    scannerView.center = CGPointMake(targetView.frame.size.width * 0.5, targetView.frame.origin.y + targetView.frame.size.height * 0.5);
+    scannerView.backgroundColor = [UIColor blueColor];
+    scannerView.alpha = 0.3;
+    [self.view addSubview:scannerView];
+}
+
 -(void)drawScannerViewWithFrame:(CGRect)frame
 {
     // 生成扫描框
@@ -184,19 +206,50 @@
     }
 }
 
-#pragma mark - 网络请求(request)
-
-#pragma mark - 数据处理(dealWith)
-
-#pragma mark - 系统Delegate
-
-#pragma mark - 自定义Delegate
-
-#pragma mark - 通知（handle）
-
-#pragma mark - IBAction(Action结尾)
-
 #pragma mark - 私有方法(p_xxx)
+// 配置相机
+-(BOOL)setupCamera
+{
+    // 相机是否授权
+    if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
+    {
+        if (!([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo] == AVAuthorizationStatusAuthorized))
+        {
+            NSLog(@"CaptureDevice not authorized");
+            return NO;
+        }
+    }
+    
+    self.capture = [[ZXCapture alloc] init];
+    self.capture.camera = self.capture.back;
+    self.capture.focusMode = AVCaptureFocusModeContinuousAutoFocus;
+    self.capture.rotation = 90.0f;
+    
+    [self.view.layer insertSublayer:self.capture.layer atIndex:0];  // 添加层之后就开始运行了
+    
+    self.capture.layer.frame = self.view.bounds;
+    self.capture.delegate = self;
+    
+    //    CGAffineTransform captureSizeTransform = CGAffineTransformMakeScale(320 / self.view.frame.size.width, 480 / self.view.frame.size.height);
+    //    self.capture.scanRect = CGRectApplyAffineTransform(self.scannerView.frame, captureSizeTransform);
+    
+    self.capture.scanRect = self.cropRect;
+    
+    return YES;
+}
+
+// 停止摄像
+-(void)stopCapture
+{
+    [self.capture stop];
+}
+
+// 显示提示框
+-(void)showAlertWithTitle:(NSString *)title andMessage:(NSString *)message
+{
+    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil];
+    [alertView show];
+}
 
 #pragma mark - getter
 -(CGRect)cropRect

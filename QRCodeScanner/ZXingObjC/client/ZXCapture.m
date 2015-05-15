@@ -116,7 +116,7 @@
       
     [self.session addOutput:_output];
       
-#warning test
+#warning 设置焦距
       // 设置焦距
       AVCaptureDevice *zxd = [self device];
       
@@ -275,9 +275,6 @@
 }
 
 - (void)start {
-    
-
-    
   if (self.hardStop) {
     return;
   }

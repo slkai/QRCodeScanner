@@ -52,7 +52,47 @@
 
     self.view.backgroundColor = [UIColor blackColor];
     
-    [self setScanView];
+    [self drawCustomView];
+    
+    [self showLoading];
+}
+
+-(void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    
+    if ([self setupCamera])
+    {
+        [self hideLoading];
+        
+        [self startCapture];
+    }
+    else
+    {
+        [self hideLoading];
+        
+        [self showAlertWithTitle:nil andMessage:@"请在iPhone的“设置-私隐-相机”选项中，允许要出发周边游访问你的相机"];
+    }
+}
+
+-(void)viewDidDisappear:(BOOL)animated
+{
+    [self stopCapture];
+    
+    [super viewDidDisappear:animated];
+}
+
+-(BOOL)setupCamera
+{
+    // 相机是否授权
+    if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
+    {
+        if (!([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo] == AVAuthorizationStatusAuthorized))
+        {
+            NSLog(@"CaptureDevice not authorized");
+            return NO;
+        }
+    }
     
     _readerView= [[ZBarReaderView alloc] init];
     _readerView.frame =CGRectMake(0,64,self.view.frame.size.width, self.view.frame.size.height - 64);   // 全屏扫
@@ -60,49 +100,21 @@
     _readerView.readerDelegate =self;       // 代理
     _readerView.torchMode =0;               // 关闭闪光灯
     _readerView.zoom = 2.0;
+    _readerView.scanCrop = [self convertRectOfInterest:self.cropRect];
+    [self.view insertSubview:_readerView belowSubview:_scanView];
     
-    CGFloat cropW = self.view.frame.size.width;
-    CGFloat cropH = self.view.frame.size.width;
-    CGFloat cropX = (self.view.frame.size.width - cropW) * 0.5;
-    CGFloat cropY = 44;
-    
-    CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
-    CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
-    
-    CGFloat convertX = cropY / screenH;
-    CGFloat convertY = ((screenW - cropW) / 2) / screenW;
-    CGFloat convertW = cropH / screenH;
-    CGFloat convertH = cropW / screenW;
-    
-    _readerView.scanCrop = CGRectMake(convertX,convertY,convertW,convertH);
-    
-    [_readerView addSubview:_scanView];
-
-    [self.view addSubview:_readerView];
-    
-    [_readerView start];
+    return YES;
 }
-
--(void)viewDidAppear:(BOOL)animated
-{
-    [_readerView start];
-}
-
--(void)viewDidDisappear:(BOOL)animated
-{
-    [_readerView stop];
-}
-
-
 
 #pragma mark - Draw
-// 设置scanView
--(void)setScanView
+// 画自定义UI
+-(void)drawCustomView
 {
-    UIView *scanView = [[UIView alloc] initWithFrame:CGRectMake((self.view.frame.size.width - 220) * 0.5, 44, 220, 220)];
+    UIView *scanView = [[UIView alloc] initWithFrame:self.cropRect];
     scanView.backgroundColor = [UIColor blueColor];
     scanView.alpha = 0.3;
     _scanView = scanView;
+    [self.view addSubview:scanView];
 }
 
 // 显示菊花
@@ -129,6 +141,13 @@
     }
 }
 
+// 显示提示框
+-(void)showAlertWithTitle:(NSString *)title andMessage:(NSString *)message
+{
+    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil];
+    [alertView show];
+}
+
 
 #pragma mark - 自定义Delegate
 - (void) readerView: (ZBarReaderView*) readerView
@@ -148,6 +167,41 @@
         
         break;
     }
+}
+
+// AlertView代理
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0) {
+        NSLog(@"确定");
+        // 返回上一级
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
+#pragma mark - 私有方法
+// 根据屏幕坐标系的rect返回设置rectOfInterest的Rect
+- (CGRect)convertRectOfInterest:(CGRect)rect
+{
+    CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
+    CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+    
+    CGFloat convertX = rect.origin.y / screenH;
+    CGFloat convertY = ((screenW - rect.size.width) / 2) / screenW;
+    CGFloat convertW = rect.size.height / screenH;
+    CGFloat convertH = rect.size.width / screenW;
+    
+    return CGRectMake(convertX, convertY, convertW, convertH);
+}
+
+-(void)startCapture
+{
+    [_readerView start];
+}
+
+-(void)stopCapture
+{
+    [_readerView stop];
 }
 
 
