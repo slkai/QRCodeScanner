@@ -10,7 +10,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 
-@interface OriginalViewController () <AVCaptureMetadataOutputObjectsDelegate>
+@interface OriginalViewController () <AVCaptureMetadataOutputObjectsDelegate,UIAlertViewDelegate>
 {
     BOOL _isReading;
     
@@ -30,13 +30,13 @@
 
 /*
  viewDidLoad
- 1.画自定义UI
- 2.显示菊花
+ 1.画自定义UI   (drawCustomView)
+ 2.显示菊花     (showLoading)
  
  viewDidAppear
- 1.配置摄像头    -> 跳至未授权处理
- 2.停止菊花
- 3.开始摄像
+ 1.配置摄像头    (setupCamera)    -> 跳至未授权处理
+ 2.停止菊花     (hideLoading)
+ 3.开始摄像     (startCapture)
  
  未授权处理：
  1.停止菊花
@@ -66,7 +66,14 @@
         
         // 开始捕捉图像
         [self startCapture];
-    };
+    }
+    else
+    {
+        // 停止菊花
+        [self hideLoading];
+        // 提示
+        [self showAlertWithTitle:nil andMessage:@"请在iPhone的“设置-私隐-相机”选项中，允许要出发周边游访问你的相机"];
+    }
 }
 
 // 配置摄像头
@@ -178,8 +185,15 @@
     }
 }
 
+// 显示提示框
+-(void)showAlertWithTitle:(NSString *)title andMessage:(NSString *)message
+{
+    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil];
+    [alertView show];
+}
 
 #pragma mark - delegate
+// 结果回调
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection
 {
     if (!_isReading) return;
@@ -197,6 +211,16 @@
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [_captureSession startRunning];
         });
+    }
+}
+
+// AlertView代理
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0) {
+        NSLog(@"确定");
+        // 返回上一级
+        [self.navigationController popViewControllerAnimated:YES];
     }
 }
 
